@@ -26,6 +26,7 @@ public class BattleStateMachine : HaiMonoBehaviour
 
     private BattleStateBase currentState;
     private ICombatAction pendingAction;
+    private SkillDataSO selectedSkillForTargeting;
     private string battleStatusText = "";
 
     private readonly TurnOrderQueue turnQueue = new TurnOrderQueue();
@@ -40,6 +41,7 @@ public class BattleStateMachine : HaiMonoBehaviour
 
     private AttackAction cachedAttackAction;
     private DefendAction cachedDefendAction;
+    private SkillAction cachedSkillAction;
 
     public event Action<BattleStateBase> OnStateChanged;
     public event Action<BattleUnit> OnActiveUnitChanged;
@@ -99,6 +101,7 @@ public class BattleStateMachine : HaiMonoBehaviour
 
         cachedAttackAction = new AttackAction(null, null);
         cachedDefendAction = new DefendAction(null);
+        cachedSkillAction = new SkillAction();
     }
 
     protected override void Start()
@@ -118,6 +121,7 @@ public class BattleStateMachine : HaiMonoBehaviour
         StopAllCoroutines();
         battleOutcome = BattleOutcome.None;
         pendingAction = null;
+        selectedSkillForTargeting = null;
         activeUnit = null;
 
         ChangeState(battleStartState);
@@ -141,11 +145,13 @@ public class BattleStateMachine : HaiMonoBehaviour
     public void SetActiveUnit(BattleUnit unit)
     {
         activeUnit = unit;
+        selectedSkillForTargeting = null;
         OnActiveUnitChanged?.Invoke(activeUnit);
     }
 
     public void NotifyPlayerTurnReady(BattleUnit hero)
     {
+        selectedSkillForTargeting = null;
         OnPlayerTurnReady?.Invoke(hero);
     }
 
@@ -165,6 +171,16 @@ public class BattleStateMachine : HaiMonoBehaviour
         return cachedDefendAction.Configure(actor);
     }
 
+    public ICombatAction CreateOrReuseSingleSkill(BattleUnit actor, SkillDataSO skill, IDamageable target)
+    {
+        return cachedSkillAction.ConfigureSingleTarget(actor, skill, target);
+    }
+
+    public ICombatAction CreateOrReuseMultiSkill(BattleUnit actor, SkillDataSO skill, IReadOnlyList<BattleUnit> groupTargets)
+    {
+        return cachedSkillAction.ConfigureMultiTarget(actor, skill, groupTargets);
+    }
+
     public void SubmitAction(ICombatAction action)
     {
         if (action == null)
@@ -172,6 +188,7 @@ public class BattleStateMachine : HaiMonoBehaviour
             return;
         }
 
+        selectedSkillForTargeting = null;
         pendingAction = action;
         ChangeState(actionExecutionState);
     }
@@ -209,18 +226,23 @@ public class BattleStateMachine : HaiMonoBehaviour
             return;
         }
 
-        // Thanh thông tin phía trên màn hình (không che nhân vật ở giữa sân)
+        // Thanh thông tin phía trên màn hình
         GUI.Box(new Rect(15, 10, Screen.width - 30, 62), $"ROUND {turnQueue.CurrentRound} | STATE: {currentStateName}");
         GUI.Label(new Rect(30, 32, Screen.width - 60, 22), battleStatusText);
         GUI.Label(new Rect(30, 50, Screen.width - 60, 20), BuildTurnOrderString());
 
-        // Bảng điều khiển lệnh phía dưới màn hình
-        float bottomY = Screen.height - 95f;
-        GUI.Box(new Rect(15, bottomY, Screen.width - 30, 85), "BẢNG ĐIỀU KHIỂN LƯỢT ĐÁNH (PHASE 3 FSM)");
+        // Bảng điều khiển phía dưới màn hình (2 hàng nút cho Đánh thường + Kỹ năng)
+        float panelHeight = 130f;
+        float bottomY = Screen.height - panelHeight - 10f;
+        string headerTitle = activeUnit != null
+            ? $"LƯỢT CỦA: {activeUnit.UnitName} (HP: {activeUnit.Health.CurrentHP}/{activeUnit.Health.MaxHP} | MP: {activeUnit.Mana.CurrentMP}/{activeUnit.Mana.MaxMP})"
+            : "BẢNG ĐIỀU KHIỂN CHIẾN ĐẤU (PHASE 4: SKILLS & AI)";
+
+        GUI.Box(new Rect(15, bottomY, Screen.width - 30, panelHeight), headerTitle);
 
         if (battleOutcome != BattleOutcome.None)
         {
-            if (GUI.Button(new Rect(30, bottomY + 30f, 260, 40), "Chơi lại trận đấu (Restart Battle)"))
+            if (GUI.Button(new Rect(30, bottomY + 40f, 260, 42), "Chơi lại trận đấu (Restart Battle)"))
             {
                 StartBattle();
             }
@@ -229,35 +251,149 @@ public class BattleStateMachine : HaiMonoBehaviour
 
         if (currentState == playerSelectActionState && activeUnit != null && !activeUnit.IsDead)
         {
-            float btnX = 30f;
-
-            for (int i = 0; i < enemyUnits.Count; i++)
+            if (selectedSkillForTargeting != null)
             {
-                BattleUnit enemy = enemyUnits[i];
-                if (enemy == null || enemy.IsDead)
-                {
-                    continue;
-                }
-
-                if (GUI.Button(new Rect(btnX, bottomY + 30f, 210f, 40f), $"Đánh {enemy.UnitName} (HP:{enemy.Health.CurrentHP})"))
-                {
-                    SetBattleStatusText($"{activeUnit.UnitName} lao tới chém {enemy.UnitName}!");
-                    SubmitAction(CreateOrReuseBasicAttack(activeUnit, enemy));
-                    return;
-                }
-
-                btnX += 220f;
+                DrawSkillTargetSelectionGUI(bottomY);
             }
-
-            if (GUI.Button(new Rect(btnX, bottomY + 30f, 190f, 40f), "Phòng Thủ (-50% DMG, +MP)"))
+            else
             {
-                SetBattleStatusText($"{activeUnit.UnitName} bật khiên Phòng Thủ!");
-                SubmitAction(CreateOrReuseDefend(activeUnit));
+                DrawMainActionMenuGUI(bottomY);
             }
         }
         else
         {
-            GUI.Label(new Rect(30, bottomY + 38f, 500, 25), "Đang thực thi lượt đi tự động...");
+            GUI.Label(new Rect(30, bottomY + 50f, 500, 25), "Đang thực thi hành động...");
+        }
+    }
+
+    private void DrawMainActionMenuGUI(float bottomY)
+    {
+        // Hàng 1: Đánh thường & Phòng thủ
+        float row1Y = bottomY + 30f;
+        float btnX = 30f;
+
+        for (int i = 0; i < enemyUnits.Count; i++)
+        {
+            BattleUnit enemy = enemyUnits[i];
+            if (enemy == null || enemy.IsDead)
+            {
+                continue;
+            }
+
+            if (GUI.Button(new Rect(btnX, row1Y, 215f, 38f), $"Đánh {enemy.UnitName} (HP:{enemy.Health.CurrentHP})"))
+            {
+                SetBattleStatusText($"{activeUnit.UnitName} lao tới chém {enemy.UnitName}!");
+                SubmitAction(CreateOrReuseBasicAttack(activeUnit, enemy));
+                return;
+            }
+
+            btnX += 225f;
+        }
+
+        if (GUI.Button(new Rect(btnX, row1Y, 195f, 38f), "Phòng Thủ (-50% DMG, +MP)"))
+        {
+            SetBattleStatusText($"{activeUnit.UnitName} bật khiên Phòng Thủ!");
+            SubmitAction(CreateOrReuseDefend(activeUnit));
+            return;
+        }
+
+        // Hàng 2: Danh sách Kỹ năng (SkillDataSO) của nhân vật đang tới lượt
+        if (activeUnit.CharacterData == null || activeUnit.CharacterData.Skills == null)
+        {
+            return;
+        }
+
+        float row2Y = bottomY + 76f;
+        float skillBtnX = 30f;
+        IReadOnlyList<SkillDataSO> skills = activeUnit.CharacterData.Skills;
+
+        for (int i = 0; i < skills.Count; i++)
+        {
+            SkillDataSO skill = skills[i];
+            if (skill == null)
+            {
+                continue;
+            }
+
+            bool enoughMana = activeUnit.Mana != null && activeUnit.Mana.HasEnoughMana(skill.ManaCost);
+            GUI.enabled = enoughMana;
+
+            string targetTag = skill.TargetType == SkillTargetType.AllEnemies ? " [AOE]" : "";
+            string manaWarning = enoughMana ? $"{skill.ManaCost} MP" : $"Thiếu MP ({skill.ManaCost})";
+            string label = $"Kỹ năng: {skill.SkillName}{targetTag} ({manaWarning})";
+
+            if (GUI.Button(new Rect(skillBtnX, row2Y, 310f, 38f), label))
+            {
+                GUI.enabled = true;
+                HandleSkillButtonClicked(skill);
+                return;
+            }
+
+            GUI.enabled = true;
+            skillBtnX += 320f;
+        }
+    }
+
+    private void HandleSkillButtonClicked(SkillDataSO skill)
+    {
+        if (skill.TargetType == SkillTargetType.AllEnemies)
+        {
+            SetBattleStatusText($"{activeUnit.UnitName} niệm chú [{skill.SkillName}] tấn công toàn bộ phe địch!");
+            SubmitAction(CreateOrReuseMultiSkill(activeUnit, skill, enemyUnits));
+            return;
+        }
+
+        if (skill.TargetType == SkillTargetType.AllAllies)
+        {
+            SetBattleStatusText($"{activeUnit.UnitName} dùng [{skill.SkillName}] cho toàn bộ đồng minh!");
+            SubmitAction(CreateOrReuseMultiSkill(activeUnit, skill, heroUnits));
+            return;
+        }
+
+        if (skill.TargetType == SkillTargetType.Self)
+        {
+            SetBattleStatusText($"{activeUnit.UnitName} dùng [{skill.SkillName}] lên bản thân!");
+            SubmitAction(CreateOrReuseSingleSkill(activeUnit, skill, activeUnit));
+            return;
+        }
+
+        // Nếu là kỹ năng Đơn mục tiêu (SingleEnemy hoặc SingleAlly) thì mở bước chọn mục tiêu
+        selectedSkillForTargeting = skill;
+        SetBattleStatusText($"Chọn mục tiêu cho kỹ năng [{skill.SkillName}] (-{skill.ManaCost} MP):");
+    }
+
+    private void DrawSkillTargetSelectionGUI(float bottomY)
+    {
+        float rowY = bottomY + 42f;
+        float btnX = 30f;
+
+        IReadOnlyList<BattleUnit> candidateList =
+            selectedSkillForTargeting.TargetType == SkillTargetType.SingleAlly ? heroUnits : enemyUnits;
+
+        for (int i = 0; i < candidateList.Count; i++)
+        {
+            BattleUnit target = candidateList[i];
+            if (target == null || target.IsDead)
+            {
+                continue;
+            }
+
+            string targetLabel = $"{target.UnitName} (HP: {target.Health.CurrentHP}/{target.Health.MaxHP})";
+            if (GUI.Button(new Rect(btnX, rowY, 240f, 42f), targetLabel))
+            {
+                SkillDataSO chosenSkill = selectedSkillForTargeting;
+                SetBattleStatusText($"{activeUnit.UnitName} thi triển [{chosenSkill.SkillName}] lên {target.UnitName}!");
+                SubmitAction(CreateOrReuseSingleSkill(activeUnit, chosenSkill, target));
+                return;
+            }
+
+            btnX += 250f;
+        }
+
+        if (GUI.Button(new Rect(btnX + 10f, rowY, 140f, 42f), "Quay lại (Hủy)"))
+        {
+            selectedSkillForTargeting = null;
+            SetBattleStatusText($"Lượt của {activeUnit.UnitName} - Hãy chọn lệnh!");
         }
     }
 
@@ -280,4 +416,3 @@ public class BattleStateMachine : HaiMonoBehaviour
         return text;
     }
 }
-
