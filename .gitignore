@@ -1,0 +1,53 @@
+# ==========================================================
+# UNITY STANDARD .GITIGNORE (Unity 6 LTS)
+# ==========================================================
+
+# Thư mục sinh tự động của Unity (TUYỆT ĐỐI KHÔNG PUSH LÊN GITHUB)
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+
+# File cấu hình IDE (Visual Studio / Rider / VSCode)
+.vs/
+.vscode/
+.idea/
+ExportedObj/
+.consulo/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# File hệ điều hành
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# File crash và gói build
+sysinfo.txt
+*.apk
+*.aab
+*.unitypackage
+*.app
+
+# Addressables & AssetBundles
+/[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
+/[Aa]ssets/[Ss]treamingAssets/aa.meta
+/[Aa]ssets/[Ss]treamingAssets/aa/*
+

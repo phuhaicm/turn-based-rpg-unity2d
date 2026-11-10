@@ -1,0 +1,30 @@
+Assets/
+├── _Project/
+│   ├── Animations/
+│   ├── Art/
+│   │   ├── Characters/ (Hero & Monster Sprites)
+│   │   ├── Environment/ (Battle Backgrounds)
+│   │   └── UI/
+│   ├── Audio/
+│   ├── Data/ (ScriptableObjects)
+│   │   ├── Characters/ (Hero_Knight.asset, Monster_Goblin.asset...)
+│   │   └── Skills/ (Skill_Slash.asset, Skill_Fireball.asset...)
+│   ├── Prefabs/
+│   │   ├── Characters/
+│   │   ├── Combat/ (DamageText, BattleFX)
+│   │   └── UI/
+│   ├── Scenes/
+│   │   ├── Boot.unity
+│   │   ├── MainMenu.unity
+│   │   └── BattleArena.unity
+│   └── Scripts/
+│       ├── Core/ (HaiMonoBehaviour, Utilities, Enums)
+│       ├── Data/ (CharacterDataSO, SkillDataSO)
+│       ├── Battle/
+│       │   ├── StateMachine/ (BattleStateMachine, States...)
+│       │   ├── TurnSystem/ (TurnOrderQueue, TurnCombatant)
+│       │   └── Actions/ (ICombatAction, AttackAction, SkillAction)
+│       ├── Combat/ (Health, DamageSystem, BuffDebuff)
+│       ├── Pooling/ (ObjectPoolManager, IPoolable)
+│       ├── UI/ (BattleHUDUI, TurnQueueUI, ActionMenuUI)
+│       └── Audio/ (AudioManager, SoundLibrary)
