@@ -457,12 +457,59 @@ public static class ProjectSetupWizardEditor
         BattleUnit goblinUnit = SpawnPrefabUnit(goblinPrefab, enemyTeamRoot.transform, "Monster_Goblin", new Vector3(3.2f, -0.4f, 0f));
         BattleUnit orcUnit = SpawnPrefabUnit(orcPrefab, enemyTeamRoot.transform, "Monster_Orc", new Vector3(5.2f, -1.2f, 0f));
 
-        GameObject sandboxObj = new GameObject("Phase2BattleSandbox");
-        Phase2BattleSandbox sandbox = sandboxObj.AddComponent<Phase2BattleSandbox>();
-        sandbox.SetUnits(knightUnit, mageUnit, goblinUnit, orcUnit);
-        EditorUtility.SetDirty(sandbox);
+        GameObject sandboxObj = new GameObject("BattleStateMachine");
+        BattleStateMachine stateMachine = sandboxObj.AddComponent<BattleStateMachine>();
+        stateMachine.SetParties(
+            new List<BattleUnit> { knightUnit, mageUnit },
+            new List<BattleUnit> { goblinUnit, orcUnit }
+        );
+        EditorUtility.SetDirty(stateMachine);
 
         EditorSceneManager.SaveScene(scene, "Assets/_Project/Scenes/BattleArena.unity");
+    }
+
+    [MenuItem("TurnBasedRPG/Setup/2. Nâng cấp Scene sang BattleStateMachine (Phase 3)", priority = 2)]
+    public static void UpgradeSceneToPhase3()
+    {
+        Selection.objects = System.Array.Empty<Object>();
+
+        Phase2BattleSandbox oldSandbox = Object.FindFirstObjectByType<Phase2BattleSandbox>();
+        if (oldSandbox != null)
+        {
+            Object.DestroyImmediate(oldSandbox.gameObject);
+        }
+
+        BattleStateMachine fsm = Object.FindFirstObjectByType<BattleStateMachine>();
+        if (fsm == null)
+        {
+            GameObject fsmObj = new GameObject("BattleStateMachine");
+            fsm = fsmObj.AddComponent<BattleStateMachine>();
+        }
+
+        List<BattleUnit> heroes = new List<BattleUnit>();
+        GameObject heroParty = GameObject.Find("HeroParty");
+        if (heroParty != null)
+        {
+            heroParty.GetComponentsInChildren(true, heroes);
+        }
+
+        List<BattleUnit> enemies = new List<BattleUnit>();
+        GameObject monsterParty = GameObject.Find("MonsterParty");
+        if (monsterParty != null)
+        {
+            monsterParty.GetComponentsInChildren(true, enemies);
+        }
+
+        fsm.SetParties(heroes, enemies);
+        EditorUtility.SetDirty(fsm);
+
+        Scene activeScene = SceneManager.GetActiveScene();
+        if (!string.IsNullOrEmpty(activeScene.path))
+        {
+            EditorSceneManager.SaveScene(activeScene);
+        }
+
+        Debug.Log("[TurnBasedRPG Setup] Đã nâng cấp Scene sang BattleStateMachine (Phase 3) thành công!");
     }
 
     private static BattleUnit SpawnPrefabUnit(GameObject prefab, Transform parent, string objName, Vector3 pos)
