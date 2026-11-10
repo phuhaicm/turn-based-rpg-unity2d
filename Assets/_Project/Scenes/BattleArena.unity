@@ -317,54 +317,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 1498135745326083912, guid: f193c60114700454092a97b32296cd1d, type: 3}
   m_PrefabInstance: {fileID: 723318844}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &1075214186
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1075214188}
-  - component: {fileID: 1075214187}
-  m_Layer: 0
-  m_Name: Phase2BattleSandbox
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1075214187
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1075214186}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4a869c7fbedb7e040a205cd0ad2e9680, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Phase2BattleSandbox
-  heroKnight: {fileID: 7736357224639605723}
-  heroMage: {fileID: 6907504203758035309}
-  monsterGoblin: {fileID: 1321590868}
-  monsterOrc: {fileID: 723318845}
---- !u!4 &1075214188
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1075214186}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1321590866
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -560,6 +512,60 @@ Transform:
   m_Children:
   - {fileID: 2051197167735136956}
   - {fileID: 355312177778474626}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2002354527
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2002354529}
+  - component: {fileID: 2002354528}
+  m_Layer: 0
+  m_Name: BattleStateMachine
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2002354528
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2002354527}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6397b00893ecb245bbfc43b47a5a4e1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BattleStateMachine
+  heroUnits:
+  - {fileID: 7736357224639605723}
+  - {fileID: 6907504203758035309}
+  enemyUnits:
+  - {fileID: 1321590868}
+  - {fileID: 723318845}
+  showDebugHUD: 1
+  currentStateName: 
+  activeUnit: {fileID: 0}
+  battleOutcome: 0
+--- !u!4 &2002354529
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2002354527}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &52411899654231695
@@ -1720,4 +1726,4 @@ SceneRoots:
   - {fileID: 1465501784}
   - {fileID: 1886249218}
   - {fileID: 201828941}
-  - {fileID: 1075214188}
+  - {fileID: 2002354529}
