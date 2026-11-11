@@ -219,6 +219,11 @@ public class BattleStateMachine : HaiMonoBehaviour
         enemyUnits = enemies;
     }
 
+    public void SetShowDebugHUD(bool visible)
+    {
+        showDebugHUD = visible;
+    }
+
     private void OnGUI()
     {
         if (!showDebugHUD)

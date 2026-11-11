@@ -48,6 +48,8 @@ public class BattleUnit : HaiMonoBehaviour, IDamageable, ITurnCombatant
 
     public event Action<BattleUnit> OnUnitDied;
     public event Action<BattleUnit, bool> OnDefendStateChanged;
+    public event Action<BattleUnit, int> OnUnitDamageTaken;
+    public event Action<BattleUnit, int> OnUnitHealed;
 
     public string UnitName => characterData != null ? characterData.CharacterName : name;
     public int Speed => characterData != null ? characterData.Speed : 10;
@@ -142,6 +144,9 @@ public class BattleUnit : HaiMonoBehaviour, IDamageable, ITurnCombatant
             healthSystem.OnDamageTaken -= HandleDamageTaken;
             healthSystem.OnDamageTaken += HandleDamageTaken;
 
+            healthSystem.OnHealed -= HandleUnitHealed;
+            healthSystem.OnHealed += HandleUnitHealed;
+
             healthSystem.OnDied -= HandleUnitDied;
             healthSystem.OnDied += HandleUnitDied;
         }
@@ -162,6 +167,7 @@ public class BattleUnit : HaiMonoBehaviour, IDamageable, ITurnCombatant
         {
             healthSystem.OnHealthChanged -= HandleHealthChanged;
             healthSystem.OnDamageTaken -= HandleDamageTaken;
+            healthSystem.OnHealed -= HandleUnitHealed;
             healthSystem.OnDied -= HandleUnitDied;
         }
 
@@ -294,6 +300,8 @@ public class BattleUnit : HaiMonoBehaviour, IDamageable, ITurnCombatant
 
     private void HandleDamageTaken(int damage)
     {
+        OnUnitDamageTaken?.Invoke(this, damage);
+
         if (!gameObject.activeInHierarchy)
         {
             return;
@@ -305,6 +313,11 @@ public class BattleUnit : HaiMonoBehaviour, IDamageable, ITurnCombatant
         }
 
         hitFlashCoroutine = StartCoroutine(HitFlashRoutine());
+    }
+
+    private void HandleUnitHealed(int healAmount)
+    {
+        OnUnitHealed?.Invoke(this, healAmount);
     }
 
     private IEnumerator HitFlashRoutine()
