@@ -585,6 +585,476 @@ public static class ProjectSetupWizardEditor
         Debug.Log("[TurnBasedRPG Setup] Đã khởi tạo xong Canvas Battle HUD, Smooth Bars & Damage Text Pool (Phase 5)!");
     }
 
+    [MenuItem("TurnBasedRPG/Setup/4. Khởi tạo VFX Pool, Camera Shake & Audio System (Phase 6)", priority = 4)]
+    public static void UpgradeSceneToPhase6Polish()
+    {
+        Selection.objects = System.Array.Empty<Object>();
+
+        if (!Directory.Exists("Assets/_Project/Audio"))
+        {
+            Directory.CreateDirectory("Assets/_Project/Audio");
+        }
+
+        if (!Directory.Exists("Assets/_Project/Prefabs/Combat"))
+        {
+            Directory.CreateDirectory("Assets/_Project/Prefabs/Combat");
+        }
+
+        // 1. Đảm bảo Scene đã có đầy đủ BattleStateMachine & HUD từ Phase 5
+        BattleStateMachine fsm = Object.FindFirstObjectByType<BattleStateMachine>();
+        BattleHUDUI hud = Object.FindFirstObjectByType<BattleHUDUI>();
+        if (fsm == null || hud == null)
+        {
+            UpgradeSceneToPhase5HUD();
+            fsm = Object.FindFirstObjectByType<BattleStateMachine>();
+        }
+
+        // 2. Sinh file âm thanh WAV 8-bit RPG thực tế vào Assets/_Project/Audio/
+        GenerateRetroAudioWavFiles();
+        AssetDatabase.Refresh();
+
+        // 3. Tạo hoặc cập nhật SoundLibrary.asset
+        SoundLibrary soundLibrary = CreateOrUpdateSoundLibraryAsset("Assets/_Project/Data/SoundLibrary.asset");
+
+        // 4. Tạo 4 Prefab Particle VFX có sẵn PooledObject & PooledParticleVFX
+        GameObject slashVfxPrefab = CreateOrUpdateParticleVfxPrefab(
+            "Assets/_Project/Prefabs/Combat/VFX_SlashHit.prefab",
+            "VFX_SlashHit",
+            new Color(1f, 0.85f, 0.25f, 1f),
+            new Color(1f, 0.35f, 0.1f, 0f),
+            burstCount: 18,
+            speedMin: 2.5f,
+            speedMax: 5.5f,
+            startSize: 0.22f,
+            lifeTime: 0.45f
+        );
+
+        GameObject fireballVfxPrefab = CreateOrUpdateParticleVfxPrefab(
+            "Assets/_Project/Prefabs/Combat/VFX_FireballBurst.prefab",
+            "VFX_FireballBurst",
+            new Color(1f, 0.45f, 0.1f, 1f),
+            new Color(0.9f, 0.1f, 0.05f, 0f),
+            burstCount: 30,
+            speedMin: 3.0f,
+            speedMax: 6.8f,
+            startSize: 0.28f,
+            lifeTime: 0.65f
+        );
+
+        GameObject healVfxPrefab = CreateOrUpdateParticleVfxPrefab(
+            "Assets/_Project/Prefabs/Combat/VFX_HealAura.prefab",
+            "VFX_HealAura",
+            new Color(0.25f, 1f, 0.55f, 1f),
+            new Color(0.1f, 0.85f, 0.95f, 0f),
+            burstCount: 22,
+            speedMin: 1.5f,
+            speedMax: 3.6f,
+            startSize: 0.24f,
+            lifeTime: 0.7f
+        );
+
+        GameObject shieldVfxPrefab = CreateOrUpdateParticleVfxPrefab(
+            "Assets/_Project/Prefabs/Combat/VFX_ShieldGuard.prefab",
+            "VFX_ShieldGuard",
+            new Color(0.35f, 0.8f, 1f, 1f),
+            new Color(0.15f, 0.45f, 0.95f, 0f),
+            burstCount: 20,
+            speedMin: 1.8f,
+            speedMax: 4.0f,
+            startSize: 0.22f,
+            lifeTime: 0.55f
+        );
+
+        // 5. Gắn VFX Prefab và CastSound vào các file SkillDataSO
+        AssignVfxAndSoundToSkillAsset(
+            "Assets/_Project/Data/Skills/Skill_HeavySlash.asset",
+            slashVfxPrefab,
+            AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/_Project/Audio/SFX_AttackSlash.wav")
+        );
+        AssignVfxAndSoundToSkillAsset(
+            "Assets/_Project/Data/Skills/Skill_Fireball.asset",
+            fireballVfxPrefab,
+            AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/_Project/Audio/SFX_Fireball.wav")
+        );
+        AssignVfxAndSoundToSkillAsset(
+            "Assets/_Project/Data/Skills/Skill_Heal.asset",
+            healVfxPrefab,
+            AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/_Project/Audio/SFX_HealSpell.wav")
+        );
+        AssignVfxAndSoundToSkillAsset(
+            "Assets/_Project/Data/Skills/Skill_PoisonBite.asset",
+            slashVfxPrefab,
+            AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/_Project/Audio/SFX_AttackSlash.wav")
+        );
+
+        // 6. Đăng ký Prewarm toàn bộ VFX Prefab vào ObjectPoolManager trong Scene
+        ObjectPoolManager poolManager = Object.FindFirstObjectByType<ObjectPoolManager>();
+        if (poolManager == null)
+        {
+            GameObject poolObj = new GameObject("ObjectPoolManager");
+            poolManager = poolObj.AddComponent<ObjectPoolManager>();
+        }
+
+        GameObject damageTextPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/Combat/FloatingDamageText.prefab");
+        if (damageTextPrefab != null)
+        {
+            poolManager.AddOrUpdatePrewarmItem(damageTextPrefab, 8);
+        }
+
+        poolManager.AddOrUpdatePrewarmItem(slashVfxPrefab, 6);
+        poolManager.AddOrUpdatePrewarmItem(fireballVfxPrefab, 4);
+        poolManager.AddOrUpdatePrewarmItem(healVfxPrefab, 4);
+        poolManager.AddOrUpdatePrewarmItem(shieldVfxPrefab, 4);
+        EditorUtility.SetDirty(poolManager);
+
+        // 7. Gắn BattleCameraShake lên Main Camera
+        Camera mainCam = Camera.main;
+        if (mainCam == null)
+        {
+            mainCam = Object.FindFirstObjectByType<Camera>();
+        }
+
+        BattleCameraShake cameraShake = null;
+        if (mainCam != null)
+        {
+            cameraShake = mainCam.GetComponent<BattleCameraShake>();
+            if (cameraShake == null)
+            {
+                cameraShake = mainCam.gameObject.AddComponent<BattleCameraShake>();
+            }
+            EditorUtility.SetDirty(cameraShake);
+        }
+
+        // 8. Tạo hoặc cập nhật BattleFeedbackManager trong Scene
+        BattleFeedbackManager feedbackManager = Object.FindFirstObjectByType<BattleFeedbackManager>();
+        if (feedbackManager == null)
+        {
+            GameObject fbObj = new GameObject("BattleFeedbackManager");
+            feedbackManager = fbObj.AddComponent<BattleFeedbackManager>();
+        }
+        feedbackManager.ConfigureFeedbackManager(
+            fsm,
+            poolManager,
+            cameraShake,
+            slashVfxPrefab,
+            healVfxPrefab,
+            shieldVfxPrefab
+        );
+        EditorUtility.SetDirty(feedbackManager);
+
+        // 9. Tạo hoặc cập nhật AudioManager (kèm 1 kênh BGM + 6 kênh SFX Ring Buffer)
+        AudioManager existingAudio = Object.FindFirstObjectByType<AudioManager>();
+        if (existingAudio != null)
+        {
+            Object.DestroyImmediate(existingAudio.gameObject);
+        }
+
+        CreateSceneAudioManager(soundLibrary, fsm);
+
+        Scene activeScene = SceneManager.GetActiveScene();
+        if (!string.IsNullOrEmpty(activeScene.path))
+        {
+            EditorSceneManager.SaveScene(activeScene);
+        }
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+
+        Debug.Log("[TurnBasedRPG Setup] Đã khởi tạo xong VFX Pool, Camera Shake & Audio System (Phase 6)!");
+    }
+
+    private static void AssignVfxAndSoundToSkillAsset(string skillAssetPath, GameObject vfxPrefab, AudioClip castClip)
+    {
+        SkillDataSO skill = AssetDatabase.LoadAssetAtPath<SkillDataSO>(skillAssetPath);
+        if (skill == null)
+        {
+            return;
+        }
+
+        SerializedObject so = new SerializedObject(skill);
+        SetObject(so, "vfxPrefab", vfxPrefab);
+        SetObject(so, "castSound", castClip);
+        so.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(skill);
+    }
+
+    private static GameObject CreateOrUpdateParticleVfxPrefab(
+        string prefabPath,
+        string vfxName,
+        Color startColor,
+        Color endColor,
+        int burstCount,
+        float speedMin,
+        float speedMax,
+        float startSize,
+        float lifeTime)
+    {
+        GameObject root = new GameObject(vfxName);
+
+        ParticleSystem ps = root.AddComponent<ParticleSystem>();
+        ParticleSystemRenderer psr = root.GetComponent<ParticleSystemRenderer>();
+
+        if (psr != null)
+        {
+            Shader spriteShader = Shader.Find("Sprites/Default");
+            if (spriteShader != null)
+            {
+                Material defaultSpriteMat = AssetDatabase.GetBuiltinExtraResource<Material>("Sprites-Default.mat");
+                if (defaultSpriteMat != null)
+                {
+                    psr.sharedMaterial = defaultSpriteMat;
+                }
+            }
+            psr.sortingOrder = 45;
+        }
+
+        var main = ps.main;
+        main.duration = lifeTime;
+        main.loop = false;
+        main.playOnAwake = false;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(lifeTime * 0.55f, lifeTime * 0.9f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(speedMin, speedMax);
+        main.startSize = new ParticleSystem.MinMaxCurve(startSize * 0.7f, startSize * 1.25f);
+        main.startColor = startColor;
+        main.gravityModifier = 0.25f;
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.maxParticles = 64;
+
+        var emission = ps.emission;
+        emission.enabled = true;
+        emission.rateOverTime = 0f;
+        emission.SetBursts(new ParticleSystem.Burst[]
+        {
+            new ParticleSystem.Burst(0f, (short)burstCount)
+        });
+
+        var shape = ps.shape;
+        shape.enabled = true;
+        shape.shapeType = ParticleSystemShapeType.Circle;
+        shape.radius = 0.25f;
+
+        var colorOverLifetime = ps.colorOverLifetime;
+        colorOverLifetime.enabled = true;
+        Gradient grad = new Gradient();
+        grad.SetKeys(
+            new GradientColorKey[]
+            {
+                new GradientColorKey(startColor, 0f),
+                new GradientColorKey(endColor, 1f)
+            },
+            new GradientAlphaKey[]
+            {
+                new GradientAlphaKey(1f, 0f),
+                new GradientAlphaKey(0.8f, 0.6f),
+                new GradientAlphaKey(0f, 1f)
+            }
+        );
+        colorOverLifetime.color = new ParticleSystem.MinMaxGradient(grad);
+
+        PooledObject pooled = root.AddComponent<PooledObject>();
+        PooledParticleVFX vfxComp = root.AddComponent<PooledParticleVFX>();
+        vfxComp.ConfigureVFX(ps, pooled, lifeTime + 0.1f);
+
+        GameObject savedPrefab = PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+        Object.DestroyImmediate(root);
+        return savedPrefab;
+    }
+
+    private static void CreateSceneAudioManager(SoundLibrary soundLibrary, BattleStateMachine fsm)
+    {
+        GameObject audioRoot = new GameObject("AudioManager");
+        AudioManager manager = audioRoot.AddComponent<AudioManager>();
+
+        GameObject bgmObj = new GameObject("BGM_Channel");
+        bgmObj.transform.SetParent(audioRoot.transform, false);
+        AudioSource bgmSource = bgmObj.AddComponent<AudioSource>();
+        bgmSource.playOnAwake = false;
+        bgmSource.loop = true;
+        bgmSource.spatialBlend = 0f;
+
+        GameObject sfxRoot = new GameObject("SFX_Channels");
+        sfxRoot.transform.SetParent(audioRoot.transform, false);
+
+        List<AudioSource> sfxList = new List<AudioSource>();
+        for (int i = 0; i < 6; i++)
+        {
+            GameObject chObj = new GameObject($"SFX_Channel_{i + 1}");
+            chObj.transform.SetParent(sfxRoot.transform, false);
+            AudioSource sfxSource = chObj.AddComponent<AudioSource>();
+            sfxSource.playOnAwake = false;
+            sfxSource.loop = false;
+            sfxSource.spatialBlend = 0f;
+            sfxList.Add(sfxSource);
+        }
+
+        manager.ConfigureAudioManager(soundLibrary, fsm, bgmSource, sfxList);
+        EditorUtility.SetDirty(manager);
+    }
+
+    private static SoundLibrary CreateOrUpdateSoundLibraryAsset(string assetPath)
+    {
+        SoundLibrary lib = AssetDatabase.LoadAssetAtPath<SoundLibrary>(assetPath);
+        if (lib == null)
+        {
+            lib = ScriptableObject.CreateInstance<SoundLibrary>();
+            AssetDatabase.CreateAsset(lib, assetPath);
+        }
+
+        SerializedObject so = new SerializedObject(lib);
+        SetObject(so, "battleBgmClip", AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/_Project/Audio/BGM_BattleTheme.wav"));
+        SetFloat(so, "bgmVolume", 0.25f);
+
+        SerializedProperty entriesProp = so.FindProperty("soundEntries");
+        if (entriesProp != null)
+        {
+            entriesProp.ClearArray();
+            AddSoundEntryToSerializedList(entriesProp, SoundType.AttackSlash, "Assets/_Project/Audio/SFX_AttackSlash.wav", 0.85f);
+            AddSoundEntryToSerializedList(entriesProp, SoundType.MagicFireball, "Assets/_Project/Audio/SFX_Fireball.wav", 0.9f);
+            AddSoundEntryToSerializedList(entriesProp, SoundType.HealSpell, "Assets/_Project/Audio/SFX_HealSpell.wav", 0.85f);
+            AddSoundEntryToSerializedList(entriesProp, SoundType.ShieldDefend, "Assets/_Project/Audio/SFX_ShieldDefend.wav", 0.85f);
+            AddSoundEntryToSerializedList(entriesProp, SoundType.TakeDamageHit, "Assets/_Project/Audio/SFX_HitImpact.wav", 0.9f);
+            AddSoundEntryToSerializedList(entriesProp, SoundType.UnitDeath, "Assets/_Project/Audio/SFX_UnitDeath.wav", 0.9f);
+            AddSoundEntryToSerializedList(entriesProp, SoundType.UIButtonClick, "Assets/_Project/Audio/SFX_UIClick.wav", 0.7f);
+            AddSoundEntryToSerializedList(entriesProp, SoundType.BattleVictory, "Assets/_Project/Audio/SFX_Victory.wav", 0.95f);
+            AddSoundEntryToSerializedList(entriesProp, SoundType.BattleDefeat, "Assets/_Project/Audio/SFX_Defeat.wav", 0.95f);
+        }
+
+        so.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(lib);
+        return lib;
+    }
+
+    private static void AddSoundEntryToSerializedList(
+        SerializedProperty listProp,
+        SoundType type,
+        string clipPath,
+        float volume)
+    {
+        int index = listProp.arraySize;
+        listProp.InsertArrayElementAtIndex(index);
+        SerializedProperty elem = listProp.GetArrayElementAtIndex(index);
+
+        SerializedProperty typeProp = elem.FindPropertyRelative("soundType");
+        if (typeProp != null) typeProp.enumValueIndex = (int)type;
+
+        SerializedProperty clipProp = elem.FindPropertyRelative("clip");
+        if (clipProp != null) clipProp.objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(clipPath);
+
+        SerializedProperty volProp = elem.FindPropertyRelative("volume");
+        if (volProp != null) volProp.floatValue = volume;
+    }
+
+    private static void GenerateRetroAudioWavFiles()
+    {
+        WriteSynthesizedWav("Assets/_Project/Audio/SFX_UIClick.wav", 0.08f, t =>
+            Mathf.Sin(2f * Mathf.PI * 880f * t) * (1f - t / 0.08f) * 0.5f);
+
+        WriteSynthesizedWav("Assets/_Project/Audio/SFX_AttackSlash.wav", 0.18f, t =>
+        {
+            float freq = Mathf.Lerp(620f, 180f, t / 0.18f);
+            float env = 1f - t / 0.18f;
+            return Mathf.Sin(2f * Mathf.PI * freq * t) * env * 0.65f;
+        });
+
+        WriteSynthesizedWav("Assets/_Project/Audio/SFX_HitImpact.wav", 0.16f, t =>
+        {
+            float freq = Mathf.Lerp(210f, 65f, t / 0.16f);
+            float env = 1f - t / 0.16f;
+            return Mathf.Clamp(Mathf.Sin(2f * Mathf.PI * freq * t) * 1.8f, -1f, 1f) * env * 0.7f;
+        });
+
+        WriteSynthesizedWav("Assets/_Project/Audio/SFX_Fireball.wav", 0.38f, t =>
+        {
+            float freq = Mathf.Lerp(420f, 95f, t / 0.38f);
+            float mod = Mathf.Sin(2f * Mathf.PI * 35f * t);
+            float env = 1f - t / 0.38f;
+            return Mathf.Sin(2f * Mathf.PI * (freq + mod * 40f) * t) * env * 0.7f;
+        });
+
+        WriteSynthesizedWav("Assets/_Project/Audio/SFX_HealSpell.wav", 0.42f, t =>
+        {
+            float freq = t < 0.14f ? 523.25f : (t < 0.28f ? 659.25f : 783.99f);
+            float env = 1f - t / 0.42f;
+            return Mathf.Sin(2f * Mathf.PI * freq * t) * env * 0.55f;
+        });
+
+        WriteSynthesizedWav("Assets/_Project/Audio/SFX_ShieldDefend.wav", 0.25f, t =>
+        {
+            float freq = t < 0.1f ? 392f : 587.33f;
+            float env = 1f - t / 0.25f;
+            return Mathf.Sin(2f * Mathf.PI * freq * t) * env * 0.55f;
+        });
+
+        WriteSynthesizedWav("Assets/_Project/Audio/SFX_UnitDeath.wav", 0.45f, t =>
+        {
+            float freq = Mathf.Lerp(320f, 80f, t / 0.45f);
+            float env = 1f - t / 0.45f;
+            return Mathf.Sin(2f * Mathf.PI * freq * t) * env * 0.65f;
+        });
+
+        WriteSynthesizedWav("Assets/_Project/Audio/SFX_Victory.wav", 0.75f, t =>
+        {
+            float freq = t < 0.18f ? 523.25f : (t < 0.36f ? 659.25f : (t < 0.54f ? 783.99f : 1046.5f));
+            float env = 1f - (t / 0.75f) * 0.5f;
+            return Mathf.Sin(2f * Mathf.PI * freq * t) * env * 0.6f;
+        });
+
+        WriteSynthesizedWav("Assets/_Project/Audio/SFX_Defeat.wav", 0.75f, t =>
+        {
+            float freq = t < 0.25f ? 392f : (t < 0.5f ? 349.23f : 293.66f);
+            float env = 1f - (t / 0.75f) * 0.6f;
+            return Mathf.Sin(2f * Mathf.PI * freq * t) * env * 0.6f;
+        });
+
+        float[] bgmNotes = { 220f, 261.63f, 329.63f, 261.63f, 246.94f, 293.66f, 369.99f, 293.66f };
+        WriteSynthesizedWav("Assets/_Project/Audio/BGM_BattleTheme.wav", 3.2f, t =>
+        {
+            int noteIndex = Mathf.FloorToInt(t / 0.4f) % bgmNotes.Length;
+            float noteTime = t % 0.4f;
+            float env = 1f - (noteTime / 0.4f) * 0.65f;
+            float freq = bgmNotes[noteIndex];
+            return Mathf.Sin(2f * Mathf.PI * freq * t) * env * 0.35f;
+        });
+    }
+
+    private static void WriteSynthesizedWav(string filePath, float durationSeconds, System.Func<float, float> sampleGenerator)
+    {
+        if (File.Exists(filePath))
+        {
+            return;
+        }
+
+        const int sampleRate = 22050;
+        int sampleCount = Mathf.Max(1, Mathf.RoundToInt(durationSeconds * sampleRate));
+        int byteCount = sampleCount * 2;
+
+        using (FileStream fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+        using (BinaryWriter bw = new BinaryWriter(fs))
+        {
+            bw.Write(System.Text.Encoding.ASCII.GetBytes("RIFF"));
+            bw.Write(36 + byteCount);
+            bw.Write(System.Text.Encoding.ASCII.GetBytes("WAVE"));
+            bw.Write(System.Text.Encoding.ASCII.GetBytes("fmt "));
+            bw.Write(16);
+            bw.Write((short)1);
+            bw.Write((short)1);
+            bw.Write(sampleRate);
+            bw.Write(sampleRate * 2);
+            bw.Write((short)2);
+            bw.Write((short)16);
+            bw.Write(System.Text.Encoding.ASCII.GetBytes("data"));
+            bw.Write(byteCount);
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float t = (float)i / sampleRate;
+                float val = Mathf.Clamp(sampleGenerator(t), -1f, 1f);
+                short pcm = (short)Mathf.RoundToInt(val * 32767f);
+                bw.Write(pcm);
+            }
+        }
+    }
+
     private static GameObject CreateOrUpdateDamageTextPrefab(string prefabPath)
     {
         GameObject root = new GameObject("FloatingDamageText");

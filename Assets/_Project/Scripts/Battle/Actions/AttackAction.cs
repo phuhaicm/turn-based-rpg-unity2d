@@ -48,6 +48,12 @@ public class AttackAction : ICombatAction
         // Lao tới trước mặt mục tiêu
         yield return MoveUnitRoutine(actor.transform, strikePosition);
 
+        actor.PlayAttackAnimation();
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlaySFX(SoundType.AttackSlash);
+        }
+
         // Trừ máu thông qua interface IDamageable
         int rawDamage = actor.CurrentAttack;
         target.TakeDamage(rawDamage);

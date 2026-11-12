@@ -40,14 +40,34 @@ public class ObjectPoolManager : HaiMonoBehaviour
     public void SetPrewarmItem(GameObject prefab, int count)
     {
         prewarmItems.Clear();
-        if (prefab != null)
+        AddOrUpdatePrewarmItem(prefab, count);
+    }
+
+    public void AddOrUpdatePrewarmItem(GameObject prefab, int count)
+    {
+        if (prefab == null)
         {
-            prewarmItems.Add(new PoolPrewarmItem
-            {
-                prefab = prefab,
-                preloadCount = Mathf.Max(1, count)
-            });
+            return;
         }
+
+        for (int i = 0; i < prewarmItems.Count; i++)
+        {
+            if (prewarmItems[i].prefab == prefab)
+            {
+                prewarmItems[i] = new PoolPrewarmItem
+                {
+                    prefab = prefab,
+                    preloadCount = Mathf.Max(1, count)
+                };
+                return;
+            }
+        }
+
+        prewarmItems.Add(new PoolPrewarmItem
+        {
+            prefab = prefab,
+            preloadCount = Mathf.Max(1, count)
+        });
     }
 
     private void PrewarmAllPools()

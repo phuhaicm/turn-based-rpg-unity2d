@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8e276c5275bde64c915297eb8c0cde3, type: 3}
+  m_Name: SoundLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::SoundLibrary
+  battleBgmClip: {fileID: 8300000, guid: 4e10df850268c644cb99298917f7266b, type: 3}
+  bgmVolume: 0.25
+  soundEntries:
+  - soundType: 1
+    clip: {fileID: 8300000, guid: 1854387b02c2205418812b988845cc19, type: 3}
+    volume: 0.85
+  - soundType: 2
+    clip: {fileID: 8300000, guid: ada3ea405b3851c43a65c2b6574dc8fc, type: 3}
+    volume: 0.9
+  - soundType: 3
+    clip: {fileID: 8300000, guid: a2cb402ae3962c04684fadeb216064d9, type: 3}
+    volume: 0.85
+  - soundType: 4
+    clip: {fileID: 8300000, guid: 503bf840b6d58f44eb7840717cce8130, type: 3}
+    volume: 0.85
+  - soundType: 5
+    clip: {fileID: 8300000, guid: e3271024ca1868c4282174ed24acf519, type: 3}
+    volume: 0.9
+  - soundType: 6
+    clip: {fileID: 8300000, guid: 57e4b59d18f604e44bf4cbb60dab1bb2, type: 3}
+    volume: 0.9
+  - soundType: 7
+    clip: {fileID: 8300000, guid: 335dde0087032244982ce36e6fec61ed, type: 3}
+    volume: 0.7
+  - soundType: 8
+    clip: {fileID: 8300000, guid: 58effd77837a8844d9568479b6348dcf, type: 3}
+    volume: 0.95
+  - soundType: 9
+    clip: {fileID: 8300000, guid: 9a46a2e2d7212664f8233c210939f0b5, type: 3}
+    volume: 0.95
