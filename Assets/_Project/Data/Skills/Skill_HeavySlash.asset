@@ -21,6 +21,6 @@ MonoBehaviour:
   targetType: 0
   damageMultiplier: 1.6
   flatBonusPower: 5
-  vfxPrefab: {fileID: 0}
+  vfxPrefab: {fileID: 5025670989208189615, guid: 7ff7b8cc84528c94397618aeb25f0332, type: 3}
   executionDuration: 0.6
-  castSound: {fileID: 0}
+  castSound: {fileID: 8300000, guid: 1854387b02c2205418812b988845cc19, type: 3}

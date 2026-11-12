@@ -80,6 +80,10 @@ public class SkillAction : ICombatAction
 
         // Bước 1: Di chuyển tới vị trí tung chiêu
         yield return MoveUnitRoutine(actor.transform, castPosition);
+
+        actor.PlayAttackAnimation();
+        PlaySkillAudio();
+
         yield return CastPrepareWait;
 
         // Bước 2: Tính toán lượng sát thương hoặc hồi máu từ SkillDataSO
@@ -92,6 +96,11 @@ public class SkillAction : ICombatAction
             if (target == null || target.IsDead)
             {
                 continue;
+            }
+
+            if (skillData.VfxPrefab != null && ObjectPoolManager.Instance != null)
+            {
+                ObjectPoolManager.Instance.Spawn(skillData.VfxPrefab, target.HitPosition, Quaternion.identity);
             }
 
             if (skillData.Category == SkillCategory.Heal)
@@ -109,6 +118,29 @@ public class SkillAction : ICombatAction
         // Bước 4: Quay về vị trí đội hình ban đầu
         yield return MoveUnitRoutine(actor.transform, startPosition);
         yield return PostActionWait;
+    }
+
+    private void PlaySkillAudio()
+    {
+        if (AudioManager.Instance == null || skillData == null)
+        {
+            return;
+        }
+
+        if (skillData.CastSound != null)
+        {
+            AudioManager.Instance.PlayCustomClip(skillData.CastSound);
+            return;
+        }
+
+        if (skillData.Category == SkillCategory.MagicalDamage)
+        {
+            AudioManager.Instance.PlaySFX(SoundType.MagicFireball);
+        }
+        else if (skillData.Category == SkillCategory.PhysicalDamage)
+        {
+            AudioManager.Instance.PlaySFX(SoundType.AttackSlash);
+        }
     }
 
     private Vector3 CalculateCastPosition(Vector3 startPosition)

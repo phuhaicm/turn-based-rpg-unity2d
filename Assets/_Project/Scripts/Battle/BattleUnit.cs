@@ -40,11 +40,19 @@ public class BattleUnit : HaiMonoBehaviour, IDamageable, ITurnCombatant
     private bool isDefending;
 
     private Vector3 originalPosition;
+    private Vector3 originalScale = Vector3.one;
     private Color originalColor = Color.white;
     private Coroutine hitFlashCoroutine;
+    private Coroutine scalePunchCoroutine;
 
     // Khởi tạo sẵn 1 lần để dùng lại trong Coroutine, tránh sinh rác bộ nhớ (Zero-GC)
     private static readonly WaitForSeconds HitFlashWait = new WaitForSeconds(0.12f);
+
+    // Băm sẵn tên biến Animator ra số nguyên (int) 1 lần duy nhất để không tốn CPU băm chuỗi lúc Runtime
+    private static readonly int AttackTriggerHash = Animator.StringToHash("Attack");
+    private static readonly int HitTriggerHash = Animator.StringToHash("Hit");
+    private static readonly int DieTriggerHash = Animator.StringToHash("Die");
+    private static readonly int DefendBoolHash = Animator.StringToHash("IsDefending");
 
     public event Action<BattleUnit> OnUnitDied;
     public event Action<BattleUnit, bool> OnDefendStateChanged;
@@ -125,6 +133,7 @@ public class BattleUnit : HaiMonoBehaviour, IDamageable, ITurnCombatant
         base.Awake();
 
         originalPosition = transform.position;
+        originalScale = transform.localScale;
         if (spriteRenderer != null)
         {
             originalColor = spriteRenderer.color;
@@ -197,6 +206,7 @@ public class BattleUnit : HaiMonoBehaviour, IDamageable, ITurnCombatant
         characterData = data;
         isDefending = false;
         originalPosition = transform.position;
+        originalScale = transform.localScale;
 
         if (spriteRenderer != null)
         {
@@ -237,12 +247,27 @@ public class BattleUnit : HaiMonoBehaviour, IDamageable, ITurnCombatant
     {
         isDefending = defending;
 
+        if (animator != null && animator.runtimeAnimatorController != null)
+        {
+            animator.SetBool(DefendBoolHash, isDefending);
+        }
+
         if (spriteRenderer != null && !IsDead)
         {
             spriteRenderer.color = isDefending ? new Color(0.75f, 0.9f, 1f, 1f) : originalColor;
         }
 
         OnDefendStateChanged?.Invoke(this, isDefending);
+    }
+
+    public void PlayAttackAnimation()
+    {
+        if (animator != null && animator.runtimeAnimatorController != null)
+        {
+            animator.SetTrigger(AttackTriggerHash);
+        }
+
+        TriggerScalePunch(new Vector3(1.18f, 0.88f, 1f), 0.14f);
     }
 
     public int TakeDamage(int rawDamage)
@@ -307,6 +332,13 @@ public class BattleUnit : HaiMonoBehaviour, IDamageable, ITurnCombatant
             return;
         }
 
+        if (animator != null && animator.runtimeAnimatorController != null && !IsDead)
+        {
+            animator.SetTrigger(HitTriggerHash);
+        }
+
+        TriggerScalePunch(new Vector3(0.84f, 1.16f, 1f), 0.15f);
+
         if (hitFlashCoroutine != null)
         {
             StopCoroutine(hitFlashCoroutine);
@@ -318,6 +350,50 @@ public class BattleUnit : HaiMonoBehaviour, IDamageable, ITurnCombatant
     private void HandleUnitHealed(int healAmount)
     {
         OnUnitHealed?.Invoke(this, healAmount);
+
+        if (gameObject.activeInHierarchy)
+        {
+            TriggerScalePunch(new Vector3(1.12f, 1.12f, 1f), 0.18f);
+        }
+    }
+
+    private void TriggerScalePunch(Vector3 multiplier, float duration)
+    {
+        if (!gameObject.activeInHierarchy)
+        {
+            return;
+        }
+
+        if (scalePunchCoroutine != null)
+        {
+            StopCoroutine(scalePunchCoroutine);
+            transform.localScale = originalScale;
+        }
+
+        scalePunchCoroutine = StartCoroutine(ScalePunchRoutine(multiplier, duration));
+    }
+
+    private IEnumerator ScalePunchRoutine(Vector3 multiplier, float duration)
+    {
+        Vector3 punchedScale = new Vector3(
+            originalScale.x * multiplier.x,
+            originalScale.y * multiplier.y,
+            originalScale.z
+        );
+
+        transform.localScale = punchedScale;
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            transform.localScale = Vector3.Lerp(punchedScale, originalScale, t);
+            yield return null;
+        }
+
+        transform.localScale = originalScale;
+        scalePunchCoroutine = null;
     }
 
     private IEnumerator HitFlashRoutine()
@@ -338,11 +414,17 @@ public class BattleUnit : HaiMonoBehaviour, IDamageable, ITurnCombatant
 
     private void HandleUnitDied()
     {
+        if (animator != null && animator.runtimeAnimatorController != null)
+        {
+            animator.SetTrigger(DieTriggerHash);
+        }
+
         if (spriteRenderer != null)
         {
             spriteRenderer.color = new Color(0.35f, 0.35f, 0.35f, 0.6f);
         }
 
+        transform.localScale = originalScale;
         OnUnitDied?.Invoke(this);
     }
 }

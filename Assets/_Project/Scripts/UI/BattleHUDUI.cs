@@ -396,6 +396,11 @@ public class BattleHUDUI : HaiMonoBehaviour
 
     private void OnBasicAttackButtonClicked()
     {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayUIClick();
+        }
+
         if (stateMachine == null || stateMachine.ActiveUnit == null)
         {
             return;
@@ -408,6 +413,11 @@ public class BattleHUDUI : HaiMonoBehaviour
 
     private void OnDefendButtonClicked()
     {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayUIClick();
+        }
+
         if (stateMachine == null || stateMachine.ActiveUnit == null)
         {
             return;
@@ -420,6 +430,11 @@ public class BattleHUDUI : HaiMonoBehaviour
 
     private void OnSkillButtonClicked(int skillIndex)
     {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayUIClick();
+        }
+
         if (stateMachine == null || stateMachine.ActiveUnit == null)
         {
             return;
@@ -527,6 +542,11 @@ public class BattleHUDUI : HaiMonoBehaviour
 
     private void OnTargetButtonClicked(int targetIndex)
     {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayUIClick();
+        }
+
         if (stateMachine == null || stateMachine.ActiveUnit == null)
         {
             return;
@@ -557,6 +577,11 @@ public class BattleHUDUI : HaiMonoBehaviour
 
     private void OnCancelTargetClicked()
     {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayUIClick();
+        }
+
         if (stateMachine != null && stateMachine.ActiveUnit != null)
         {
             ShowMainActionButtons(stateMachine.ActiveUnit);
@@ -565,6 +590,11 @@ public class BattleHUDUI : HaiMonoBehaviour
 
     private void OnRestartBattleClicked()
     {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayUIClick();
+        }
+
         if (endBattlePanel != null)
         {
             endBattlePanel.SetActive(false);
